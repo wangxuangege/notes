@@ -1,0 +1,149 @@
+DUBBO SPI扩展点源码学习
+=================
+
+# 1. 概念
+
+&nbsp;&nbsp;&nbsp;&nbsp;DUBBO SPI扩展点类型有：扩展点自动包装（Wrapper）、扩展点自动装配、扩展点自适应（Adaptive）和扩展点自动激活（Activate）。了解这些概念，才能深入读懂代码，并且能够搞清楚DUBBO SPI相比于传统SPI有哪些增强。
+
+## 1.1 扩展点自动包装（Wrapper）
+
+&nbsp;&nbsp;&nbsp;&nbsp;ExtensionLoader会把加载扩展点时（通过扩展点配置文件中内容），如果该实现有拷贝构造函数，则判定为扩展点Wrapper类。Wrapper类同样实现了扩展点接口。Wrapper类内容：
+~~~java 
+public class XxxProtocolWrapper implemenets Protocol {
+    Protocol impl;
+ 
+    public XxxProtocol(Protocol protocol) { impl = protocol; }
+ 
+    // 接口方法做一个操作后，再调用extension的方法
+    public void refer() {
+        //... 一些操作
+        impl .refer();
+        // ... 一些操作
+    }
+ 
+    // ...
+}
+~~~
+&nbsp;&nbsp;&nbsp;&nbsp;Wrapper不是扩展点实现，用于从ExtensionLoader返回扩展点时，Wrap在扩展点实现外。即从ExtensionLoader中返回的实际上是Wrapper类的实例，Wrapper持有了实际的扩展点实现类。扩展点的Wrapper类可以有多个，也可以根据需要新增。通过Wrapper类可以把所有扩展点公共逻辑移至Wrapper中。新加的Wrapper在所有的扩展点上添加了逻辑，有些类似AOP（Wraper代理了扩展点）。
+
+## 1.2 扩展点自动装配
+
+&nbsp;&nbsp;&nbsp;&nbsp;加载扩展点时，自动注入依赖的扩展点。
+
+&nbsp;&nbsp;&nbsp;&nbsp;加载扩展点时，扩展点实现类的成员如果为其它扩展点类型，ExtensionLoader在会自动注入依赖的扩展点。ExtensionLoader通过扫描扩展点实现类的所有set方法来判定其成员。即ExtensionLoader会执行扩展点的拼装操作。
+
+&nbsp;&nbsp;&nbsp;&nbsp;示例：有两个为扩展点CarMaker（造车者）、wheelMaker(造轮者)，接口类如下：
+~~~java
+public interface CarMaker {
+    Car makeCar();
+}
+ 
+public interface WheelMaker {
+    Wheel makeWheel();
+}
+~~~
+&nbsp;&nbsp;&nbsp;&nbsp;CarMaker的一个实现类：
+~~~java
+
+public class RaceCarMaker implemenets CarMaker {
+    WheelMaker wheelMaker;
+ 
+    public setWheelMaker(WheelMaker wheelMaker) {
+        this.wheelMaker = wheelMaker;
+    }
+ 
+    public Car makeCar() {
+        // ...
+        Wheel wheel = wheelMaker.makeWheel();
+        // ...
+        return new RaceCar(wheel, ...);
+    }
+}
+~~~
+&nbsp;&nbsp;&nbsp;&nbsp;ExtensionLoader加载CarMaker的扩展点实现RaceCar时，setWheelMaker方法的WheelMaker也是扩展点则会注入WheelMaker的实现。这里带来另一个问题，ExtensionLoader要注入依赖扩展点时，如何决定要注入依赖扩展点的哪个实现。在这个示例中，即是在多个WheelMaker的实现中要注入哪个。这个问题在下面一点“Adaptive实例”中说明。
+
+## 1.3 扩展点自适应（Adaptive）
+
+&nbsp;&nbsp;&nbsp;&nbsp;ExtensionLoader注入的依赖扩展点是一个Adaptive实例，直到扩展点方法执行时才决定调用是一个扩展点实现。ubbo使用URL对象（包含了Key-Value）传递配置信息。扩展点方法调用会有URL参数（或是参数有URL成员），这样依赖的扩展点也可以从URL拿到配置信息，所有的扩展点自己定好配置的Key后，配置信息从URL上从最外层传入。URL在配置传递上即是一条总线。
+
+&nbsp;&nbsp;&nbsp;&nbsp;示例：有两个为扩展点CarMaker（造车者）、wheelMaker(造轮者)，接口类如下：
+~~~java
+
+public interface CarMaker {
+    Car makeCar(URL url);
+}
+ 
+public interface WheelMaker {
+    Wheel makeWheel(URL url);
+}
+~~~
+CarMaker的一个实现类：
+~~~java
+
+public class RaceCarMaker implemenets CarMaker {
+    WheelMaker wheelMaker;
+ 
+    public setWheelMaker(WheelMaker wheelMaker) {
+        this.wheelMaker = wheelMaker;
+    }
+ 
+    public Car makeCar(URL url) {
+        // ...
+        Wheel wheel = wheelMaker.makeWheel(url);
+        // ...
+        return new RaceCar(wheel, ...);
+    }
+}   
+~~~
+&nbsp;&nbsp;&nbsp;&nbsp;注入的Adaptive实例可以提取约定Key来决定使用哪个WheelMaker实现来调用对应实现的真正的makeWheel方法。如提取wheel.type key即url.get("wheel.type")来决定WheelMake实现。Adaptive实例的逻辑是固定，指定提取的URL的Key，即可以代理真正的实现类上，可以动态生成。在Dubbo的ExtensionLoader的扩展点类开对应的Adaptive实现是在加载扩展点里动态生成。指定提取的URL的Key通过@Adaptive注解在接口方法上提供。
+
+&nbsp;&nbsp;&nbsp;&nbsp;下面是Dubbo的Transporter扩展点的代码：
+~~~java
+
+public interface Transporter {
+    @Adaptive({"server", "transport"})
+    Server bind(URL url, ChannelHandler handler) throws RemotingException;
+ 
+    @Adaptive({"client", "transport"})
+    Client connect(URL url, ChannelHandler handler) throws RemotingException;
+ 
+}
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;对于bind方法表示，Adaptive实现先查找"server"key，如果该Key没有值则找"transport"key值，来决定代理到哪个实际扩展点。
+
+## 1.4 扩展点自动激活（Activate）
+
+&nbsp;&nbsp;&nbsp;&nbsp;对于集合类扩展点，比如：Filter, InvokerListener, ExportListener, TelnetHandler, StatusChecker等，可以同时加载多个实现，此时，可以用自动激活来简化配置，如：
+~~~java
+
+import com.alibaba.dubbo.common.extension.Activate;
+import com.alibaba.dubbo.rpc.Filter;
+ 
+@Activate // 无条件自动激活
+public class XxxFilter implements Filter {
+    // ...
+}
+~~~
+&nbsp;&nbsp;&nbsp;&nbsp;或：
+~~~java
+import com.alibaba.dubbo.common.extension.Activate;
+import com.alibaba.dubbo.rpc.Filter;
+ 
+@Activate("xxx") // 当配置了xxx参数，并且参数为有效值时激活，比如配了cache="lru"，自动激活CacheFilter。
+public class XxxFilter implements Filter {
+    // ...
+}
+~~~
+&nbsp;&nbsp;&nbsp;&nbsp;或：
+~~~java
+
+import com.alibaba.dubbo.common.extension.Activate;
+import com.alibaba.dubbo.rpc.Filter;
+ 
+@Activate(group = "provider", value = "xxx") // 只对提供方激活，group可选"provider"或"consumer"
+public class XxxFilter implements Filter {
+    // ...
+}   
+~~~
+
