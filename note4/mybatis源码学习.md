@@ -371,4 +371,111 @@ public interface RuleMapper {
 
 # 6. MyBatis连接池
 
-&nbsp;&nbsp;&nbsp;&nbsp;MyBatis数据源分为三类：1）不适用连接池的数据源UN_POOLED；2）使用连接池的数据源POOLED；3）使用JNDI实现的数据源。
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis数据源分为三类：1）不使用连接池的数据源UN_POOLED；2）使用连接池的数据源POOLED；3）使用JNDI实现的数据源。
+
+## 6.1 数据源类型解析
+
+&nbsp;&nbsp;&nbsp;&nbsp;数据源解析方式和事务解析方式一样，解析时候根据type，然后将相应的数据源工厂注册到Configuration中。
+
+## 6.2 JNDI数据源
+
+&nbsp;&nbsp;&nbsp;&nbsp;JNDI数据源是在WEB容器中配置的，通过lookup找到对应的数据源。
+
+~~~java
+public class JndiDataSourceFactory implements DataSourceFactory {
+
+  public static final String INITIAL_CONTEXT = "initial_context";
+  public static final String DATA_SOURCE = "data_source";
+  public static final String ENV_PREFIX = "env.";
+
+  private DataSource dataSource;
+
+  @Override
+  public void setProperties(Properties properties) {
+    try {
+      InitialContext initCtx;
+      Properties env = getEnvProperties(properties);
+      if (env == null) {
+        initCtx = new InitialContext();
+      } else {
+        initCtx = new InitialContext(env);
+      }
+
+      if (properties.containsKey(INITIAL_CONTEXT)
+          && properties.containsKey(DATA_SOURCE)) {
+        Context ctx = (Context) initCtx.lookup(properties.getProperty(INITIAL_CONTEXT));
+        // 将JNDI中的数据源引用关联到数据源工厂中
+        dataSource = (DataSource) ctx.lookup(properties.getProperty(DATA_SOURCE));
+      } else if (properties.containsKey(DATA_SOURCE)) {
+        dataSource = (DataSource) initCtx.lookup(properties.getProperty(DATA_SOURCE));
+      }
+
+    } catch (NamingException e) {
+      throw new DataSourceException("There was an error configuring JndiDataSourceTransactionPool. Cause: " + e, e);
+    }
+  }
+
+  @Override
+  public DataSource getDataSource() {
+    return dataSource;
+  }
+
+  private static Properties getEnvProperties(Properties allProps) {
+    final String PREFIX = ENV_PREFIX;
+    Properties contextProperties = null;
+    for (Entry<Object, Object> entry : allProps.entrySet()) {
+      String key = (String) entry.getKey();
+      String value = (String) entry.getValue();
+      if (key.startsWith(PREFIX)) {
+        if (contextProperties == null) {
+          contextProperties = new Properties();
+        }
+        contextProperties.put(key.substring(PREFIX.length()), value);
+      }
+    }
+    return contextProperties;
+  }
+}
+~~~
+
+## 6.3 不使用连接池的数据源UN_POOLED
+
+&nbsp;&nbsp;&nbsp;&nbsp;不使用连接池的数据源比较简单，只是包装了基本的数据源连接获取方式而已，不多做介绍。
+
+## 6.4 使用连接池的数据源POOLED
+
+&nbsp;&nbsp;&nbsp;&nbsp;POOLED连接池的连接比较特殊，是通过代理完成实际数据库连接获取的，构造函数时候proxyConnection连接通过动态代理生成，具体代理的逻辑如invoke逻辑所示。
+~~~java
+  public PooledConnection(Connection connection, PooledDataSource dataSource) {
+    this.hashCode = connection.hashCode();
+    this.realConnection = connection;
+    this.dataSource = dataSource;
+    this.createdTimestamp = System.currentTimeMillis();
+    this.lastUsedTimestamp = System.currentTimeMillis();
+    this.valid = true;
+    this.proxyConnection = (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(), IFACES, this);
+  }
+  
+  /**
+    * 此处对连接做了代理处理，原因时为了让上层使用数据源时候，不用区分带连接池的数据源，因为带连接池的数据源不需要真的close掉连接，透明处理掉 
+    */
+  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    String methodName = method.getName();
+    if (CLOSE.hashCode() == methodName.hashCode() && CLOSE.equals(methodName)) {
+      // 执行close方法，那么需要把连接池的连接进行push处理
+      dataSource.pushConnection(this);
+      return null;
+    } else {
+      try {
+        if (!Object.class.equals(method.getDeclaringClass())) {
+          // Object原生方法调用
+          checkConnection();
+        }
+        // 执行具体的连接操作
+        return method.invoke(realConnection, args);
+      } catch (Throwable t) {
+        throw ExceptionUtil.unwrapThrowable(t);
+      }
+    }
+  }
+~~~
