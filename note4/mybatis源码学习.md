@@ -173,7 +173,7 @@ public interface RuleMapper {
   }
 ~~~
 
-# 3. 配置层
+# 4. 配置层
 
 &nbsp;&nbsp;&nbsp;&nbsp;MyBatis配置层支持JAVA API方式和XML方式，本质上是一样的，后面介绍从XML方式入手分析，XMLConfigBuilder执行parse方式开始解析XML配置，解析后拿到的配置最终都是存储在Configuration对象中。
 ~~~java
