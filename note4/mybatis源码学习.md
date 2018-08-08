@@ -4,18 +4,35 @@ MyBatis源码学习
 
 ![mybatis架构](static/mybatis架构.jpg)
 
-# 1. 数据库交互操作接口
+# 1. MyBatis组成部分
+
+|组件|含义|
+|--------|--------|
+|SqlSession            |作为MyBatis工作的主要顶层API，表示和数据库交互的会话，完成必要数据库增删改查功能|
+|Executor              |MyBatis执行器，是MyBatis 调度的核心，负责SQL语句的生成和查询缓存的维护|
+|StatementHandler   |封装了JDBC Statement操作，负责对JDBC statement 的操作，如设置参数、将Statement结果集转换成List集合|
+|ParameterHandler   |负责对用户传递的参数转换成JDBC Statement 所需要的参数|
+|ResultSetHandler    |负责将JDBC返回的ResultSet结果集对象转换成List类型的集合|
+|TypeHandler          |负责java数据类型和jdbc数据类型之间的映射和转换|
+|MappedStatement   | MappedStatement维护了一条<select|update|delete|insert>节点的封装|
+|SqlSource            |负责根据用户传递的parameterObject，动态地生成SQL语句，将信息封装到BoundSql对象中，并返回|
+|BoundSql             |表示动态生成的SQL语句以及相应的参数信息|
+|Configuration        |MyBatis所有的配置信息都维持在Configuration对象之中|
+
+[MyBatis组件关系图](static/MyBatis组件关系图.png)
+
+# 2. 数据库交互操作接口
 
 &nbsp;&nbsp;&nbsp;&nbsp;数据库交互操作包括两种方式：1）使用传统MyBatis提供的API；2）使用Mapper接口操作。
 
-# 1.1 使用传统MyBatis提供的API操作
+# 2.1 使用传统MyBatis提供的API操作
 
 &nbsp;&nbsp;&nbsp;&nbsp;使用SqlSession对象完成和数据库交互，请求时候根据statement和参数来执行。面向对象方式推荐使用接口直接来调用，因此实际上对SQL操作使用第二种方式，Mapper接口来实现。
 ~~~txt
 List<?>|int|void|Map<?,?> SqlSession.select|insert|update|delete|......(statement, [parameterObject])
 ~~~
 
-# 1.2 使用Mapper接口操作
+# 2.2 使用Mapper接口操作
 
 &nbsp;&nbsp;&nbsp;&nbsp;MyBatis加载配置后，会将配置文件每个Mapper节点抽象为Mapper接口，接口中申请的方法跟Mapper节点中<select|update|insert|delete>节点项对应，即<select|update|insert|delete>节点的ID值为Mapper接口中的方法名称。parameterType值表示方法对应的入参，resultMap值对应Mapper接口表示返回值类型或者返回结果集的类型。
 ~~~java
@@ -38,7 +55,7 @@ public interface RuleMapper {
 
 &nbsp;&nbsp;&nbsp;&nbsp;根据MyBatis的配置规范配置好后，通过SqlSession.getMapper(XXXMapper.class)方法，MyBatis会根据相应的接口声明的方法信息，通过动态代理机制生成一个Mapper实例，我们使用Mapper接口的某一个方法时，MyBatis会根据这个方法的方法名和参数类型，确定StatementId，底层还是通过SqlSession.select("statementId",parameterObject);或者SqlSession.update("statementId",parameterObject);等等来实现对数据库的操作。
 
-# 1.3 Mapper动态代理执行逻辑
+# 2.3 Mapper动态代理执行逻辑
 
 &nbsp;&nbsp;&nbsp;&nbsp;Mapper接口没有具体实现，是通过动态代理实现调用，具体执行动态代理逻辑如下，根据Mapper接口调用的不同包括三个分支：1）若Mapper调用Object的原生方法，那么会走第一个分支；2）若Mapper执行的是接口的默认方法（jdk8+），那么会走第二个分支；3）执行Mapper中定义的sql接口，会走第三个分支。
 ~~~java
