@@ -19,7 +19,7 @@ MyBatis源码学习
 |BoundSql             |表示动态生成的SQL语句以及相应的参数信息|
 |Configuration        |MyBatis所有的配置信息都维持在Configuration对象之中|
 
-[MyBatis组件关系图](static/MyBatis组件关系图.png)
+![MyBatis组件关系图](static/MyBatis组件关系图.png)
 
 # 2. 数据库交互操作接口
 
