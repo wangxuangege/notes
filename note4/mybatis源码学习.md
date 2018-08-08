@@ -257,3 +257,118 @@ public interface RuleMapper {
     return (T) Proxy.newProxyInstance(mapperInterface.getClassLoader(), new Class[] { mapperInterface }, mapperProxy);
   }
 ~~~
+
+# 5. MyBatis事务管理
+
+## 5.1 事务类型解析
+
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis事务类型包括JdbcTransaction和ManagedTransaction。配置文件中会指定事务类型，如下图所示，下面实例指定的是JDBC事务类型。
+~~~xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+    </settings>
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+                <property name="url" value="jdbc:mysql://172.30.251.33:3306/route"/>
+                <property name="username" value="root"/>
+                <property name="password" value="CDE#4rfv"/>
+            </dataSource>
+        </environment>
+    </environments>
+    <mappers>
+        <mapper resource="RuleMapper.xml"/>
+    </mappers>
+</configuration>
+~~~
+
+~~~java
+  private void environmentsElement(XNode context) throws Exception {
+    if (context != null) {
+      if (environment == null) {
+        environment = context.getStringAttribute("default");
+      }
+      for (XNode child : context.getChildren()) {
+        String id = child.getStringAttribute("id");
+        if (isSpecifiedEnvironment(id)) {
+          TransactionFactory txFactory = transactionManagerElement(child.evalNode("transactionManager"));
+          DataSourceFactory dsFactory = dataSourceElement(child.evalNode("dataSource"));
+          DataSource dataSource = dsFactory.getDataSource();
+          Environment.Builder environmentBuilder = new Environment.Builder(id)
+              .transactionFactory(txFactory)
+              .dataSource(dataSource);
+          configuration.setEnvironment(environmentBuilder.build());
+        }
+      }
+    }
+  }
+  
+  private TransactionFactory transactionManagerElement(XNode context) throws Exception {
+    if (context != null) {
+      String type = context.getStringAttribute("type");
+      Properties props = context.getChildrenAsProperties();
+      TransactionFactory factory = (TransactionFactory) resolveClass(type).newInstance();
+      factory.setProperties(props);
+      return factory;
+    }
+    throw new BuilderException("Environment declaration requires a TransactionFactory.");
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;Configuration初始化时候，初始化TypeAliasRegistry如下图所示，会根据JDBC或者MANAGED对应不同的事务工厂类，在解析配置后，根据事务type的类型创建事务工厂类，然后将事务工厂类注册到Configuration中。
+~~~java
+  public Configuration() {
+    typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
+    typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
+
+    typeAliasRegistry.registerAlias("JNDI", JndiDataSourceFactory.class);
+    typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
+    typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
+
+    typeAliasRegistry.registerAlias("PERPETUAL", PerpetualCache.class);
+    typeAliasRegistry.registerAlias("FIFO", FifoCache.class);
+    typeAliasRegistry.registerAlias("LRU", LruCache.class);
+    typeAliasRegistry.registerAlias("SOFT", SoftCache.class);
+    typeAliasRegistry.registerAlias("WEAK", WeakCache.class);
+
+    typeAliasRegistry.registerAlias("DB_VENDOR", VendorDatabaseIdProvider.class);
+
+    typeAliasRegistry.registerAlias("XML", XMLLanguageDriver.class);
+    typeAliasRegistry.registerAlias("RAW", RawLanguageDriver.class);
+
+    typeAliasRegistry.registerAlias("SLF4J", Slf4jImpl.class);
+    typeAliasRegistry.registerAlias("COMMONS_LOGGING", JakartaCommonsLoggingImpl.class);
+    typeAliasRegistry.registerAlias("LOG4J", Log4jImpl.class);
+    typeAliasRegistry.registerAlias("LOG4J2", Log4j2Impl.class);
+    typeAliasRegistry.registerAlias("JDK_LOGGING", Jdk14LoggingImpl.class);
+    typeAliasRegistry.registerAlias("STDOUT_LOGGING", StdOutImpl.class);
+    typeAliasRegistry.registerAlias("NO_LOGGING", NoLoggingImpl.class);
+
+    typeAliasRegistry.registerAlias("CGLIB", CglibProxyFactory.class);
+    typeAliasRegistry.registerAlias("JAVASSIST", JavassistProxyFactory.class);
+
+    languageRegistry.setDefaultDriverClass(XMLLanguageDriver.class);
+    languageRegistry.register(RawLanguageDriver.class);
+  }
+~~~ 
+
+## 5.2 JDBC事务JdbcTransaction
+
+&nbsp;&nbsp;&nbsp;&nbsp;JdbcTransaction直接使用JDBC的提交和回滚事务管理机制 。它依赖与从dataSource中取得的连接connection 来管理transaction 的作用域，connection对象的获取被延迟到调用getConnection()方法。如果autocommit设置为on，开启状态的话，它会忽略commit和rollback。直观地讲，就是JdbcTransaction是使用的java.sql.Connection 上的commit和rollback功能，JdbcTransaction只是相当于对java.sql.Connection事务处理进行了一次包装（wrapper），Transaction的事务管理都是通过java.sql.Connection实现的。
+
+## 5.3 MANAGED事务ManagedTransaction
+
+&nbsp;&nbsp;&nbsp;&nbsp;ManagedTransaction让容器来管理事务Transaction的整个生命周期，意思就是说，使用ManagedTransaction的commit和rollback功能不会对事务有任何的影响，它什么都不会做，它将事务管理的权利移交给了容器来实现。看如下Managed的实现代码大家就会一目了然。
+
+&nbsp;&nbsp;&nbsp;&nbsp;如果我们使用MyBatis构建本地程序，即不是WEB程序，若将type设置成MANAGED，那么，我们执行的任何update操作，即使我们最后执行了commit操作，数据也不会保留，不会对数据库造成任何影响。因为我们将MyBatis配置成了MANAGED，即MyBatis自己不管理事务，而我们又是运行的本地程序，没有事务管理功能，所以对数据库的update操作都是无效的。
+
+# 6. MyBatis连接池
+
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis数据源分为三类：1）不适用连接池的数据源UN_POOLED；2）使用连接池的数据源POOLED；3）使用JNDI实现的数据源。
