@@ -14,7 +14,7 @@ MyBatis源码学习
 |ParameterHandler   |负责对用户传递的参数转换成JDBC Statement 所需要的参数|
 |ResultSetHandler    |负责将JDBC返回的ResultSet结果集对象转换成List类型的集合|
 |TypeHandler          |负责java数据类型和jdbc数据类型之间的映射和转换|
-|MappedStatement   | MappedStatement维护了一条\<select|update|delete|insert\>节点的封装|
+|MappedStatement   | MappedStatement维护了一条select|update|delete|insert节点的封装|
 |SqlSource            |负责根据用户传递的parameterObject，动态地生成SQL语句，将信息封装到BoundSql对象中，并返回|
 |BoundSql             |表示动态生成的SQL语句以及相应的参数信息|
 |Configuration        |MyBatis所有的配置信息都维持在Configuration对象之中|
