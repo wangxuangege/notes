@@ -131,3 +131,129 @@ public interface RuleMapper {
     return result;
   }
 ~~~
+
+# 3. SqlSession执行SQL
+
+&nbsp;&nbsp;&nbsp;&nbsp;使用Mapper接口执行SQL最终还是转换为MyBatis传统API操作的。例如执行RuleMapper的selectOne方法，最终会执行DefaultSqlSession的selectOne方法。
+~~~java
+  public <T> T selectOne(String statement, Object parameter) {
+    List<T> list = this.<T>selectList(statement, parameter);
+    if (list.size() == 1) {
+      return list.get(0);
+    } else if (list.size() > 1) {
+      throw new TooManyResultsException("Expected one result (or null) to be returned by selectOne(), but found: " + list.size());
+    } else {
+      return null;
+    }
+  }
+  
+  public <E> List<E> selectList(String statement, Object parameter) {
+    return this.selectList(statement, parameter, RowBounds.DEFAULT);
+  }
+  
+  public <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds) {
+    try {
+      // 根据statement找到要执行的SQL
+      MappedStatement ms = configuration.getMappedStatement(statement);
+      // 将具体查询操作委托给executor执行
+      return executor.query(ms, wrapCollection(parameter), rowBounds, Executor.NO_RESULT_HANDLER);
+    } catch (Exception e) {
+      throw ExceptionFactory.wrapException("Error querying database.  Cause: " + e, e);
+    } finally {
+      ErrorContext.instance().reset();
+    }
+  }
+~~~
+
+~~~java
+  public <E> List<E> query(MappedStatement ms, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
+    BoundSql boundSql = ms.getBoundSql(parameterObject);
+    CacheKey key = createCacheKey(ms, parameterObject, rowBounds, boundSql);
+    return query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
+  }
+~~~
+
+# 3. 配置层
+
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis配置层支持JAVA API方式和XML方式，本质上是一样的，后面介绍从XML方式入手分析，XMLConfigBuilder执行parse方式开始解析XML配置，解析后拿到的配置最终都是存储在Configuration对象中。
+~~~java
+  private void parseConfiguration(XNode root) {
+    try {
+      //issue #117 read properties first
+      propertiesElement(root.evalNode("properties"));
+      Properties settings = settingsAsProperties(root.evalNode("settings"));
+      loadCustomVfs(settings);
+      typeAliasesElement(root.evalNode("typeAliases"));
+      pluginElement(root.evalNode("plugins"));
+      objectFactoryElement(root.evalNode("objectFactory"));
+      objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
+      reflectorFactoryElement(root.evalNode("reflectorFactory"));
+      settingsElement(settings);
+      // read it after objectFactory and objectWrapperFactory issue #631
+      environmentsElement(root.evalNode("environments"));
+      databaseIdProviderElement(root.evalNode("databaseIdProvider"));
+      typeHandlerElement(root.evalNode("typeHandlers"));
+      mapperElement(root.evalNode("mappers"));
+    } catch (Exception e) {
+      throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);
+    }
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;核心介绍一下Mapper的解析，有两种方式，最终都是通过MapperRegistry注册到Configuration，注册为Map<Class<?>, MapperProxyFactory>。
+~~~java
+  private void mapperElement(XNode parent) throws Exception {
+    if (parent != null) {
+      for (XNode child : parent.getChildren()) {
+        if ("package".equals(child.getName())) {
+          String mapperPackage = child.getStringAttribute("name");
+          configuration.addMappers(mapperPackage);
+        } else {
+          String resource = child.getStringAttribute("resource");
+          String url = child.getStringAttribute("url");
+          String mapperClass = child.getStringAttribute("class");
+          if (resource != null && url == null && mapperClass == null) {
+            ErrorContext.instance().resource(resource);
+            InputStream inputStream = Resources.getResourceAsStream(resource);
+            XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, resource, configuration.getSqlFragments());
+            mapperParser.parse();
+          } else if (resource == null && url != null && mapperClass == null) {
+            ErrorContext.instance().resource(url);
+            InputStream inputStream = Resources.getUrlAsStream(url);
+            XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, url, configuration.getSqlFragments());
+            mapperParser.parse();
+          } else if (resource == null && url == null && mapperClass != null) {
+            Class<?> mapperInterface = Resources.classForName(mapperClass);
+            configuration.addMapper(mapperInterface);
+          } else {
+            throw new BuilderException("A mapper element may only specify a url, resource or class, but not more than one.");
+          }
+        }
+      }
+    }
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;通过SqlSession获取Mapper，然后获取到MapperProxyFactory，然后实例化生成Mapper。
+~~~java
+  public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
+    final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
+    if (mapperProxyFactory == null) {
+      throw new BindingException("Type " + type + " is not known to the MapperRegistry.");
+    }
+    try {
+      return mapperProxyFactory.newInstance(sqlSession);
+    } catch (Exception e) {
+      throw new BindingException("Error getting mapper instance. Cause: " + e, e);
+    }
+  }
+  
+  public T newInstance(SqlSession sqlSession) {
+    final MapperProxy<T> mapperProxy = new MapperProxy<T>(sqlSession, mapperInterface, methodCache);
+    return newInstance(mapperProxy);
+  }
+  
+  protected T newInstance(MapperProxy<T> mapperProxy) {
+    return (T) Proxy.newProxyInstance(mapperInterface.getClassLoader(), new Class[] { mapperInterface }, mapperProxy);
+  }
+~~~
