@@ -672,3 +672,76 @@ public class JndiDataSourceFactory implements DataSourceFactory {
     return cache;
   }
 ~~~
+
+# 9. MyBatis SQL执行器Executor
+
+&nbsp;&nbsp;&nbsp;&nbsp;Executor接口类图如下，是一个复核设计模式结构，包括装饰模式和模板方法模式实现。
+
+![Executor类图](static/Executor类图.jpg)
+
+&nbsp;&nbsp;&nbsp;&nbsp;BaseExecutor为模板模式中的模板类。这个类在Executor接口实现中非常重要，其实现了Executor的大部分方法。他的子类只要实现三个方法即可，其中两个是doUpdate和doSelect方法，子类在实现这两个方法时直接操作数据库即可，其余的工作交由BaseExecutor完成。
+
+&nbsp;&nbsp;&nbsp;&nbsp;CachingExecutor是一个Executor的装饰器，给一个Executor增加了缓存的功能。
+
+&nbsp;&nbsp;&nbsp;&nbsp;BaseExecutor内部实现了查询的本地缓存功能:
+
+~~~java
+ public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
+    BoundSql boundSql = ms.getBoundSql(parameter);
+    // 本地缓存key，构建key时候包括查询sql、参数类型、参数值、环境标示
+    CacheKey key = createCacheKey(ms, parameter, rowBounds, boundSql);
+    return query(ms, parameter, rowBounds, resultHandler, key, boundSql);
+ }
+ 
+ public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql) throws SQLException {
+    ErrorContext.instance().resource(ms.getResource()).activity("executing a query").object(ms.getId());
+    if (closed) {
+      throw new ExecutorException("Executor was closed.");
+    }
+    if (queryStack == 0 && ms.isFlushCacheRequired()) {
+      clearLocalCache();
+    }
+    List<E> list;
+    try {
+      queryStack++;
+      // 先从本地缓存中获取查询接口
+      list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
+      if (list != null) {
+        handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
+      } else {
+        // 本地缓存查询不到，走DB查询
+        list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
+      }
+    } finally {
+      queryStack--;
+    }
+    if (queryStack == 0) {
+      for (DeferredLoad deferredLoad : deferredLoads) {
+        deferredLoad.load();
+      }
+      // issue #601
+      deferredLoads.clear();
+      if (configuration.getLocalCacheScope() == LocalCacheScope.STATEMENT) {
+        // issue #482
+        clearLocalCache();
+      }
+    }
+    return list;
+  }
+ 
+ private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql) throws SQLException {
+    List<E> list;
+    localCache.putObject(key, EXECUTION_PLACEHOLDER);
+    try {
+      list = doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
+    } finally {
+      localCache.removeObject(key);
+    }
+    // 写入本地缓存
+    localCache.putObject(key, list);
+    if (ms.getStatementType() == StatementType.CALLABLE) {
+      localOutputParameterCache.putObject(key, parameter);
+    }
+    return list;
+  }
+~~~
