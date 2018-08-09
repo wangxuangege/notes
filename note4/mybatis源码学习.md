@@ -479,3 +479,196 @@ public class JndiDataSourceFactory implements DataSourceFactory {
     }
   }
 ~~~
+
+# 7. MyBatis日志适配模块
+
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis中使用的日志都是通过org.apache.ibatis.logging.LogFactory.getLog(Class<?> aClass)获取。
+
+~~~java
+  public static Log getLog(Class<?> aClass) {
+    return getLog(aClass.getName());
+  }
+
+  public static Log getLog(String logger) {
+    try {
+      return logConstructor.newInstance(logger);
+    } catch (Throwable t) {
+      throw new LogException("Error creating logger for logger " + logger + ".  Cause: " + t, t);
+    }
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;logConstructor初始化的地方：
+
+~~~java
+  private static void setImplementation(Class<? extends Log> implClass) {
+    try {
+      Constructor<? extends Log> candidate = implClass.getConstructor(String.class);
+      Log log = candidate.newInstance(LogFactory.class.getName());
+      if (log.isDebugEnabled()) {
+        log.debug("Logging initialized using '" + implClass + "' adapter.");
+      }
+      logConstructor = candidate;
+    } catch (Throwable t) {
+      throw new LogException("Error setting Log implementation.  Cause: " + t, t);
+    }
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;可能调用setImplementation的地方：
+
+~~~java
+  public static synchronized void useCustomLogging(Class<? extends Log> clazz) {
+    setImplementation(clazz);
+  }
+
+  public static synchronized void useSlf4jLogging() {
+    setImplementation(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
+  }
+
+  public static synchronized void useCommonsLogging() {
+    setImplementation(org.apache.ibatis.logging.commons.JakartaCommonsLoggingImpl.class);
+  }
+
+  public static synchronized void useLog4JLogging() {
+    setImplementation(org.apache.ibatis.logging.log4j.Log4jImpl.class);
+  }
+
+  public static synchronized void useLog4J2Logging() {
+    setImplementation(org.apache.ibatis.logging.log4j2.Log4j2Impl.class);
+  }
+
+  public static synchronized void useJdkLogging() {
+    setImplementation(org.apache.ibatis.logging.jdk14.Jdk14LoggingImpl.class);
+  }
+
+  public static synchronized void useStdOutLogging() {
+    setImplementation(org.apache.ibatis.logging.stdout.StdOutImpl.class);
+  }
+
+  public static synchronized void useNoLogging() {
+    setImplementation(org.apache.ibatis.logging.nologging.NoLoggingImpl.class);
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;继续看上游可能设置的地方，可能有两种情况，1）MyBatis配置中定义的日志类型，通过useCustomLogging设置；2）在初始化LogFactory的static模块尝试设置日志类型。
+
+~~~java
+  public void setLogImpl(Class<? extends Log> logImpl) {
+    if (logImpl != null) {
+      this.logImpl = logImpl;
+      LogFactory.useCustomLogging(this.logImpl);
+    }
+  }
+  
+  // Mybatis配置中定义的日志类型
+  Class<? extends Log> logImpl = (Class<? extends Log>)resolveClass(props.getProperty("logImpl"));
+  configuration.setLogImpl(logImpl);
+~~~
+
+~~~java
+  static {
+    tryImplementation(new Runnable() {
+      @Override
+      public void run() {
+        useSlf4jLogging();
+      }
+    });
+    tryImplementation(new Runnable() {
+      @Override
+      public void run() {
+        useCommonsLogging();
+      }
+    });
+    tryImplementation(new Runnable() {
+      @Override
+      public void run() {
+        useLog4J2Logging();
+      }
+    });
+    tryImplementation(new Runnable() {
+      @Override
+      public void run() {
+        useLog4JLogging();
+      }
+    });
+    tryImplementation(new Runnable() {
+      @Override
+      public void run() {
+        useJdkLogging();
+      }
+    });
+    tryImplementation(new Runnable() {
+      @Override
+      public void run() {
+        useNoLogging();
+      }
+    });
+  }
+~~~
+
+# 8. MyBatis内存缓存设计
+
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis内存缓存实现类PerpetualCache，然后通过装饰模式扩展缓存的功能，装饰包括BlockingCache、FifoCache、LoggingCache、LruCache、ScheduledCache、SerializedCache、SoftCache、SynchronizedCache、TransactionalCache和WeakCache。
+
+&nbsp;&nbsp;&nbsp;&nbsp;MyBatis缓存的构建流程如下图代码所示：
+
+~~~java
+  private void cacheElement(XNode context) throws Exception {
+    if (context != null) {
+      String type = context.getStringAttribute("type", "PERPETUAL");
+      Class<? extends Cache> typeClass = typeAliasRegistry.resolveAlias(type);
+      String eviction = context.getStringAttribute("eviction", "LRU");
+      Class<? extends Cache> evictionClass = typeAliasRegistry.resolveAlias(eviction);
+      Long flushInterval = context.getLongAttribute("flushInterval");
+      Integer size = context.getIntAttribute("size");
+      boolean readWrite = !context.getBooleanAttribute("readOnly", false);
+      boolean blocking = context.getBooleanAttribute("blocking", false);
+      Properties props = context.getChildrenAsProperties();
+      builderAssistant.useNewCache(typeClass, evictionClass, flushInterval, size, readWrite, blocking, props);
+    }
+  }
+~~~
+
+~~~java
+  public Cache useNewCache(Class<? extends Cache> typeClass,
+      Class<? extends Cache> evictionClass,
+      Long flushInterval,
+      Integer size,
+      boolean readWrite,
+      boolean blocking,
+      Properties props) {
+    Cache cache = new CacheBuilder(currentNamespace)
+        .implementation(valueOrDefault(typeClass, PerpetualCache.class))
+        .addDecorator(valueOrDefault(evictionClass, LruCache.class))
+        .clearInterval(flushInterval)
+        .size(size)
+        .readWrite(readWrite)
+        .blocking(blocking)
+        .properties(props)
+        .build();
+    configuration.addCache(cache);
+    currentCache = cache;
+    return cache;
+  }
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;对于Cache的构建前，设置Cache的每一种属性，都是通过装饰类来构建的。
+
+~~~java
+  public Cache build() {
+    setDefaultImplementations();
+    Cache cache = newBaseCacheInstance(implementation, id);
+    setCacheProperties(cache);
+    if (PerpetualCache.class.equals(cache.getClass())) {
+      for (Class<? extends Cache> decorator : decorators) {
+        cache = newCacheDecoratorInstance(decorator, cache);
+        setCacheProperties(cache);
+      }
+      cache = setStandardDecorators(cache);
+    } else if (!LoggingCache.class.isAssignableFrom(cache.getClass())) {
+      cache = new LoggingCache(cache);
+    }
+    return cache;
+  }
+~~~
