@@ -38,3 +38,7 @@
 ## 2018-08-20
 
 - 1 [sinatra 文档](https://www.simapple.com/sinatra-chinese-doc)
+
+## 2018-08-27
+
+- 1 [B树、B+树、LSM树以及其典型应用场景](https://blog.csdn.net/u010853261/article/details/78217823)
