@@ -42,3 +42,11 @@
 ## 2018-08-27
 
 - 1 [B树、B+树、LSM树以及其典型应用场景](https://blog.csdn.net/u010853261/article/details/78217823)
+
+## 2018-08-31
+
+- 1 [【Java进阶】利用APT优雅的实现统一日志格式](http://emacoo.cn/coding/java-apt-logging/)（主要看一下如何解决IDE中显示编译错误）
+
+- 2 [Java内省和反射浅谈](https://www.cnblogs.com/winclpt/articles/7405271.html)
+
+- 3 [Java内省机制](https://blog.csdn.net/u010445297/article/details/60967146)
