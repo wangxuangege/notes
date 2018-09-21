@@ -50,3 +50,17 @@
 - 2 [Java内省和反射浅谈](https://www.cnblogs.com/winclpt/articles/7405271.html)
 
 - 3 [Java内省机制](https://blog.csdn.net/u010445297/article/details/60967146)
+
+## 2018-09-05
+
+- 1 [JAVA 单例双重检查(double check)为什么不好用](https://blog.csdn.net/anjxue/article/details/51038466)
+
+- 2 [23种设计模式全解析](https://www.cnblogs.com/geek6/p/3951677.html)
+
+## 2018-09-21
+
+- 1 [iptables的规则语法](https://blog.csdn.net/junjieguo/article/details/7478295)
+
+- 2 [Linux下iptables 禁止端口和开放端口](https://www.cnblogs.com/zongfa/p/7967935.html)
+
+- 3 [sof/netstat命令的一个重要作用： 根据进程查端口， 根据端口查进程](https://blog.csdn.net/stpeace/article/details/69934763)
