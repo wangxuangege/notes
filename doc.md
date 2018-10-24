@@ -72,3 +72,11 @@
 ## 2018-09-28
 
 - 1 [Sublime Text 3 安装Go语言相关插件go sublime](https://www.cnblogs.com/fengxm/p/5940900.html)
+
+## 2018-10-10
+
+- 1 [maven跳过单元测试-maven.test.skip和skipTests的区别](https://www.cnblogs.com/javabg/p/8026881.html)
+
+## 2018-10-24
+
+- 1 [happens-before俗解](http://ifeve.com/easy-happens-before/)
