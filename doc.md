@@ -80,3 +80,7 @@
 ## 2018-10-24
 
 - 1 [happens-before俗解](http://ifeve.com/easy-happens-before/)
+
+## 3018-10-30
+
+- 1 [Nginx工作原理和优化](https://www.cnblogs.com/linguoguo/p/5511293.html)
