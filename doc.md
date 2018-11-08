@@ -1,4 +1,4 @@
-文档参考
+﻿文档参考
 =================
 
 ## 2018-08-15
@@ -81,6 +81,24 @@
 
 - 1 [happens-before俗解](http://ifeve.com/easy-happens-before/)
 
-## 3018-10-30
+## 2018-10-30
 
 - 1 [Nginx工作原理和优化](https://www.cnblogs.com/linguoguo/p/5511293.html)
+
+## 2018-11-02
+
+- 1 [单播、广播和多播IP地址](http://www.cnblogs.com/therock/articles/2798653.html)
+
+- 2 [多级代理下Nginx获取真实用户IP地址的总结](https://blog.csdn.net/abc86319253/article/details/44492985)
+
+- 3 [Linux下的crontab定时执行任务命令详解](https://www.cnblogs.com/longjshz/p/5779215.html)
+
+- 4 [Nginx日志管理及切割](https://blog.csdn.net/zhuchunyan_aijia/article/details/80763180)
+
+- 5 [PFX文件提取公钥私钥](https://blog.csdn.net/problem2050/article/details/50528704)
+
+## 2018-11-08
+
+ - 1 [intellij idea cpu占用率太大太满 运行速度太慢 使了五个解决方法最终成功](https://blog.csdn.net/zdxxinlang/article/details/78391060)
+
+- 2 [Intellij IDEA 2018 最新优化配置](https://blog.csdn.net/qq_32454537/article/details/81905117)
