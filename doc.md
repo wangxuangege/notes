@@ -99,6 +99,15 @@
 
 ## 2018-11-08
 
- - 1 [intellij idea cpu占用率太大太满 运行速度太慢 使了五个解决方法最终成功](https://blog.csdn.net/zdxxinlang/article/details/78391060)
+- 1 [intellij idea cpu占用率太大太满 运行速度太慢 使了五个解决方法最终成功](https://blog.csdn.net/zdxxinlang/article/details/78391060)
 
 - 2 [Intellij IDEA 2018 最新优化配置](https://blog.csdn.net/qq_32454537/article/details/81905117)
+
+## 2018-11-13
+
+- 1 [Maven项目打包为jar的几种方式](https://blog.csdn.net/puhaiyang/article/details/78380550)
+
+- 2 [【Maven学习】maven-assembly-plugin的使用](http://www.cnblogs.com/f-zhao/p/6929814.html)
+
+## 2018-11-22
+ - 1[MySQL online ddl原理](http://www.cnblogs.com/cchust/p/4639397.html)
