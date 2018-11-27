@@ -110,4 +110,8 @@
 - 2 [【Maven学习】maven-assembly-plugin的使用](http://www.cnblogs.com/f-zhao/p/6929814.html)
 
 ## 2018-11-22
- - 1[MySQL online ddl原理](http://www.cnblogs.com/cchust/p/4639397.html)
+ - 1 [MySQL online ddl原理](http://www.cnblogs.com/cchust/p/4639397.html)
+ 
+ ## 3018-11-27
+ 
+ - 1 [Zookeeper开源客户端ZKClient和Curator简介](https://blog.csdn.net/wo541075754/article/details/68067872)
