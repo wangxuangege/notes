@@ -115,3 +115,5 @@
  ## 3018-11-27
  
  - 1 [Zookeeper开源客户端ZKClient和Curator简介](https://blog.csdn.net/wo541075754/article/details/68067872)
+ 
+ - 2 [zookeeper学习笔记-zkclient,curator使用](https://blog.csdn.net/shangsu666/article/details/51453263)
