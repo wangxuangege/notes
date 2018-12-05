@@ -112,8 +112,16 @@
 ## 2018-11-22
  - 1 [MySQL online ddl原理](http://www.cnblogs.com/cchust/p/4639397.html)
  
- ## 3018-11-27
+## 2018-11-27
  
  - 1 [Zookeeper开源客户端ZKClient和Curator简介](https://blog.csdn.net/wo541075754/article/details/68067872)
  
  - 2 [zookeeper学习笔记-zkclient,curator使用](https://blog.csdn.net/shangsu666/article/details/51453263)
+ 
+## 2018-12-05
+
+- 1 [luajit 安装cjson](https://www.cnblogs.com/dongxiao-yang/p/5293120.html)
+
+- 2 [OpenResty中的upstream healthcheck功能沉思录](https://blog.csdn.net/tao_627/article/details/79298904)
+
+- 2 [基于 lua-resty-upstream-healthcheck 动态检测后端服务节点的状态](http://blog.51cto.com/quietmadman/1725302)
