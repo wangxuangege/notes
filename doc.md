@@ -125,3 +125,11 @@
 - 2 [OpenResty中的upstream healthcheck功能沉思录](https://blog.csdn.net/tao_627/article/details/79298904)
 
 - 2 [基于 lua-resty-upstream-healthcheck 动态检测后端服务节点的状态](http://blog.51cto.com/quietmadman/1725302)
+
+## 2018-12-14
+
+- 1 [HTTP1.0 HTTP 1.1 HTTP 2.0主要区别](https://www.jianshu.com/p/25b762d58e66)
+
+## 2018-12-18
+
+- 1 [Nginx性能调优之buffer参数设置](https://blog.tanteng.me/2016/03/nginx-buffer-params/)
