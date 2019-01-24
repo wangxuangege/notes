@@ -149,3 +149,5 @@
 - 4 [获取用户的真实IP](https://www.cnblogs.com/dtdxrk/p/9438507.html)
 
 - 5 [容器从weblogic迁移到springboot遇到的坑，特殊字符需要转义（在新的RFC3986规范中重新定义了需要强制转义的请求字符）](https://www.cnblogs.com/panchanggui/p/9436348.html)
+
+- 6 [Spring基础学习-SpringMVC异步处理模式分析(DeferredResult/SseEmitter等）](https://blog.csdn.net/icarusliu/article/details/79539105)
