@@ -143,3 +143,9 @@
 - 1 [服务器TIME_WAIT和CLOSE_WAIT详解和解决办法](https://www.cnblogs.com/sunxucool/p/3449068.html)
 
 - 2 [编写自己的SpringBoot-starter](https://www.cnblogs.com/yuansc/p/9088212.html)
+
+- 3 [Spring Boot 自定义starter](https://www.cnblogs.com/cz-xjw/p/6632402.html)
+
+- 4 [获取用户的真实IP](https://www.cnblogs.com/dtdxrk/p/9438507.html)
+
+- 5 [容器从weblogic迁移到springboot遇到的坑，特殊字符需要转义（在新的RFC3986规范中重新定义了需要强制转义的请求字符）](https://www.cnblogs.com/panchanggui/p/9436348.html)
