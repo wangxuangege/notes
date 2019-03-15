@@ -138,7 +138,7 @@
 
 - 1 [【细谈Java并发】谈谈LinkedBlockingQueue](https://blog.csdn.net/tonywu1992/article/details/83419448)
 
-## 2018-01-22
+## 2019-01-22
 
 - 1 [服务器TIME_WAIT和CLOSE_WAIT详解和解决办法](https://www.cnblogs.com/sunxucool/p/3449068.html)
 
@@ -151,3 +151,29 @@
 - 5 [容器从weblogic迁移到springboot遇到的坑，特殊字符需要转义（在新的RFC3986规范中重新定义了需要强制转义的请求字符）](https://www.cnblogs.com/panchanggui/p/9436348.html)
 
 - 6 [Spring基础学习-SpringMVC异步处理模式分析(DeferredResult/SseEmitter等）](https://blog.csdn.net/icarusliu/article/details/79539105)
+
+## 2019-01-29
+
+- 1 [分布式开放消息系统(RocketMQ)的原理与实践](https://www.jianshu.com/p/453c6e7ff81c)
+
+## 2019-02-22
+
+- 1 [Java魔法类：Unsafe应用解析](https://mp.weixin.qq.com/s/h3MB8p0sEA7VnrMXFq9NBA)
+
+- 2 [Java中神奇的双刃剑--Unsafe](https://www.cnblogs.com/throwable/p/9139947.html)
+
+- 3 [Caffeine-比Guava Cache更好的缓存](https://blog.csdn.net/varyall/article/details/81172725)
+
+- 4 [Apache Ignite核心特性介绍(2.5.0版)](https://www.zybuluo.com/liyuj/note/1179662)
+
+## 2019-03-08
+
+- 1 [还不理解“分布式事务”？这篇给你讲清楚！](https://mp.weixin.qq.com/s?__biz=MjM5MDAxOTk2MQ==&mid=2650280792&idx=1&sn=96194308287e833e730b776f570f79e4&chksm=be478b4e89300258e01ae89dc8ef8a30d16f875452f3989177448f6b892917c340dd7897b041&scene=4&subscene=126&ascene=0&devicetype=android-26&version=2700033a&nettype=ctnet&abtest_cookie=BQABAAgACgALABIAEwAFAJ6GHgAjlx4AVpkeAL2ZHgDTmR4AAAA%3D&lang=zh_CN&pass_ticket=uGKp87rn78SbDSXZEG21Lf51M6nU7okrxD%2FRiRWtXQWBiKSHJyF9IjTD4Sq3FoYL&wx_header=1)
+
+- 2 [请不要再称数据库是CP或者AP (Please stop calling databases CP or AP)](https://blog.the-pans.com/cap/?tdsourcetag=s_pcqq_aiomsg)
+
+## 2019-03-14
+
+- 1 [通俗地解释脏读、不可重复读、幻读](https://blog.csdn.net/Somhu/article/details/78775198)
+
+- 2 [理解MySql事务隔离机制、锁以及各种锁协议](https://blog.csdn.net/gklifg/article/details/38752691)
