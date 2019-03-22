@@ -177,3 +177,15 @@
 - 1 [通俗地解释脏读、不可重复读、幻读](https://blog.csdn.net/Somhu/article/details/78775198)
 
 - 2 [理解MySql事务隔离机制、锁以及各种锁协议](https://blog.csdn.net/gklifg/article/details/38752691)
+
+## 2019-03-16
+
+- 1 [RocketMQ——Name Server篇](https://blog.csdn.net/meilong_whpu/article/details/76922527)
+
+## 2019-03-22
+
+- 1 [如何把jar发布到中央仓库](https://blog.csdn.net/huangjinjin520/article/details/78915789)
+
+- 2 [如何发布jar包到maven中央仓库](https://www.cnblogs.com/softidea/p/6743108.html)
+
+- 3 [将动态库打包在Jar包并调用的方法](https://www.cnblogs.com/yucl/articles/9075395.html)
