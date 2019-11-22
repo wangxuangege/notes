@@ -189,3 +189,23 @@
 - 2 [如何发布jar包到maven中央仓库](https://www.cnblogs.com/softidea/p/6743108.html)
 
 - 3 [将动态库打包在Jar包并调用的方法](https://www.cnblogs.com/yucl/articles/9075395.html)
+
+## 2019-03-27
+
+- 1 [spring jpa之实体属性类型转换器AttributeConverter,自定义Converter,通用Converter](https://www.jianshu.com/p/15f5b7062eac?tdsourcetag=s_pcqq_aiomsg)
+
+## 2019-05-20
+
+- 1 [远程debug调试java代码(2种模式)](https://www.cnblogs.com/Lawson/p/6188370.html)
+
+## 2019-10-23
+
+- 1 [聚簇索引与非聚簇索引（也叫二级索引）](https://www.jianshu.com/p/fa8192853184)
+
+- 2 [B-tree/b+tree 原理以及聚簇索引和非聚簇索引](https://blog.csdn.net/u010727189/article/details/79399384)
+
+- 3 [应用启动耗时长，启动日志出现SecureRandom instance for session ID generation using [SHA1PRNG]](https://blog.csdn.net/yt4766269/article/details/78439811?utm_source=blogxgwz8)
+
+## 2019-11-22
+
+- 1 [Java动态加载jar及class文件](https://www.cnblogs.com/moonandstar08/p/5827806.html)
