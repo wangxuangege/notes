@@ -209,3 +209,7 @@
 ## 2019-11-22
 
 - 1 [Java动态加载jar及class文件](https://www.cnblogs.com/moonandstar08/p/5827806.html)
+
+## 2020-05-18
+
+- 1 [Java premain](https://mp.weixin.qq.com/s?__biz=MzAxNjk4ODE4OQ==&mid=2247488880&idx=2&sn=dfb2ebcf65f185f5c5e95560306a9b41&chksm=9bed3402ac9abd1473b6970f3eab6761bc07d3e2816f22db6c277aef0269e4b1ee22efa5e927&mpshare=1&scene=23&srcid=0518in1NA57MCisczFA0Cm1Y&sharer_sharetime=1589766268603&sharer_shareid=0c0c09c5c47409e512a40c635b8b4ad4#rd)
