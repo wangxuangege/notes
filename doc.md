@@ -213,3 +213,21 @@
 ## 2020-05-18
 
 - 1 [Java premain](https://mp.weixin.qq.com/s?__biz=MzAxNjk4ODE4OQ==&mid=2247488880&idx=2&sn=dfb2ebcf65f185f5c5e95560306a9b41&chksm=9bed3402ac9abd1473b6970f3eab6761bc07d3e2816f22db6c277aef0269e4b1ee22efa5e927&mpshare=1&scene=23&srcid=0518in1NA57MCisczFA0Cm1Y&sharer_sharetime=1589766268603&sharer_shareid=0c0c09c5c47409e512a40c635b8b4ad4#rd)
+
+- 2 [premain和agentmain区别](https://blog.csdn.net/u010900754/article/details/96755781)
+
+## 2020-05-24
+
+- 1 [Mockito的使用及原理及分析](https://zhuanlan.zhihu.com/p/28983008)
+
+- 2 [mockito原理浅析](https://zhuanlan.zhihu.com/p/87523954)
+
+- 3 [JDK动态代理为什么不能代理类](https://mp.weixin.qq.com/s?__biz=MzIwNTI2ODY5OA==&mid=2649938585&idx=1&sn=fb8f8daba9506aa19174bde8b78d150d&chksm=8f35092cb842803a85909b16dfeb7d9c5e5e1dcff05f10638696b1c30b36589258f978a06594&scene=21#wechat_redirect)
+
+- 4 [Java常见几种动态代理的对比](https://mp.weixin.qq.com/s?__biz=MzIwNTI2ODY5OA==&mid=2649938597&idx=1&sn=f646f74287c43aeedb3670029cca80e5&chksm=8f350910b84280060218acc59b2200381cd33fac2c1cf6cf64068dcfd79407babfc8175e23c5&scene=21#wechat_redirect)
+
+## 2020-05-25
+
+- 1 [byte-buddy 1.9.6 简述及原理](https://blog.csdn.net/undergrowth/article/details/86493336)
+
+- 2 [Byte Buddy 教程](https://notes.diguage.com/byte-buddy-tutorial/)
