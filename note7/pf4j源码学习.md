@@ -64,15 +64,66 @@ protected void initialize() {
         pluginsRoot = createPluginsRoot();
     }
 
+    // 创建插件仓库（插件可以从那些载体获取）
     pluginRepository = createPluginRepository();
+
+    // 创建插件工厂
     pluginFactory = createPluginFactory();
+
+    // 创建扩展点工厂
     extensionFactory = createExtensionFactory();
+
+    // 插件基本信息获取器
     pluginDescriptorFinder = createPluginDescriptorFinder();
+
+    // 插件扩展点获取器
     extensionFinder = createExtensionFinder();
+
+    // 插件状态（禁用、启用那些插件，通过配置文件定义）
     pluginStatusProvider = createPluginStatusProvider();
+
+    // 创建插件加载器
     pluginLoader = createPluginLoader();
 
+    // 版本校验与管理
     versionManager = createVersionManager();
+
+    // 插件依赖管理
     dependencyResolver = new DependencyResolver(versionManager);
 }
 ~~~
+
+### 2.2.1 插件根目录
+
+&nbsp;&nbsp;&nbsp;&nbsp;构建插件管理器PluginManager可以传入根目录，若没有传入，则可以根据下面逻辑获取：插件根目录优先从系统属性（pf4j.pluginsDir）中获取，若没有设置，则默认从plugins目录获取。
+
+### 2.2.2 插件仓库
+
+&nbsp;&nbsp;&nbsp;&nbsp;插件仓库记录了插件可以通过那些载体记录，默认插件管理器DefaultPluginManager为例说明，默认插件构建器通过组合方式来构建插件仓库。1）JarPluginRepository仓库：在根目录下，以JAR结尾的文件；2）DefaultPluginRepository仓库：在根目录下，目录文件下的所有非隐藏文件；3）开发模式下，会使用DevelopmentPluginRepository仓库，其含义为：在target或build目录下的所有非隐藏文件。<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;类层次如下:<br/>
+
+<ul>
+    PluginRepository
+    <ul>
+        BasePluginRepository
+        <ul>
+            <li>DefaultPluginRepository</li>
+            <li>DevelopmentPluginRepository</li>
+            <li>JarPluginRepository</li>
+        </ul>
+    </ul>
+    <ul>CompoundPluginRepository</ul>
+</ul>
+
+~~~
+protected PluginRepository createPluginRepository() {
+    return new CompoundPluginRepository()
+        .add(new DevelopmentPluginRepository(getPluginsRoot()), this::isDevelopment)
+        .add(new JarPluginRepository(getPluginsRoot()), this::isNotDevelopment)
+        .add(new DefaultPluginRepository(getPluginsRoot()), this::isNotDevelopment);
+}
+~~~
+
+
+### 2.2.3 插件工厂
