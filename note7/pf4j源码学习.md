@@ -208,7 +208,7 @@ public interface VersionManager {
 }
 ~~~
 
-### 2.3.0 依赖管理
+### 2.2.10 依赖管理
 
 &nbsp;&nbsp;&nbsp;&nbsp;用于将插件版本依赖关系构建成一张依赖关系图，用于控制插件的加载顺序。
 
@@ -300,17 +300,373 @@ protected PluginWrapper loadPluginFromPath(Path pluginPath) {
         pluginWrapper.setPluginState(PluginState.DISABLED);
     }
 
-    log.debug("Created wrapper '{}' for plugin '{}'", pluginWrapper, pluginPath);
-
     pluginId = pluginDescriptor.getPluginId();
 
-    // add plugin to the list with plugins
     plugins.put(pluginId, pluginWrapper);
     getUnresolvedPlugins().add(pluginWrapper);
 
-    // add plugin class loader to the list with class loaders
     getPluginClassLoaders().put(pluginId, pluginClassLoader);
 
     return pluginWrapper;
 }
 ~~~ 
+
+
+### 2.3。1 插件依赖解决
+
+~~~
+ protected void resolvePlugins() {
+    // 待加载的所有插件基本信息
+    List<PluginDescriptor> descriptors = new ArrayList<>();
+    for (PluginWrapper plugin : plugins.values()) {
+        descriptors.add(plugin.getDescriptor());
+    }
+
+    // 插件版本依赖解决（构建插件依赖关系图）
+    DependencyResolver.Result result = dependencyResolver.resolve(descriptors);
+
+    // 判断是否有循环依赖
+    if (result.hasCyclicDependency()) {
+        throw new DependencyResolver.CyclicDependencyException();
+    }
+
+    // 判断是否存在没有找到的依赖插件
+    List<String> notFoundDependencies = result.getNotFoundDependencies();
+    if (!notFoundDependencies.isEmpty()) {
+        throw new DependencyResolver.DependenciesNotFoundException(notFoundDependencies);
+    }
+
+    // 判断是否存在错误的版本
+    List<DependencyResolver.WrongDependencyVersion> wrongVersionDependencies = result.getWrongVersionDependencies();
+    if (!wrongVersionDependencies.isEmpty()) {
+        throw new DependencyResolver.DependenciesWrongVersionException(wrongVersionDependencies);
+    }
+
+    // 根据插件依赖关系构建加载插件的顺序
+    List<String> sortedPlugins = result.getSortedPlugins();
+
+    // 按照顺序加载插件
+    for (String pluginId : sortedPlugins) {
+        PluginWrapper pluginWrapper = plugins.get(pluginId);
+        if (unresolvedPlugins.remove(pluginWrapper)) {
+            PluginState pluginState = pluginWrapper.getPluginState();
+            if (pluginState != PluginState.DISABLED) {
+                pluginWrapper.setPluginState(PluginState.RESOLVED);
+            }
+
+            resolvedPlugins.add(pluginWrapper);
+
+            firePluginStateEvent(new PluginStateEvent(this, pluginWrapper, pluginState));
+        }
+    }
+}
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;构建插件依赖关系图的逻辑如下：
+
+~~~
+public Result resolve(List<PluginDescriptor> plugins) {
+    dependenciesGraph = new DirectedGraph<>();
+    dependentsGraph = new DirectedGraph<>();
+
+    // 填充依赖关系图
+    Map<String, PluginDescriptor> pluginByIds = new HashMap<>();
+    for (PluginDescriptor plugin : plugins) {
+        // 填充依赖关系图节点
+        addPlugin(plugin);
+        // 映射表构建
+        pluginByIds.put(plugin.getPluginId(), plugin);
+    }
+
+    // 拓扑排序
+    List<String> sortedPlugins = dependenciesGraph.reverseTopologicalSort();
+
+    Result result = new Result(sortedPlugins);
+
+    resolved = true;
+
+    // 当存在循环依赖时，sortedPlugins为空
+    if (sortedPlugins != null) {
+        for (String pluginId : sortedPlugins) {
+            // 依赖插件不存在的记录
+            if (!pluginByIds.containsKey(pluginId)) {
+                result.addNotFoundDependency(pluginId);
+            }
+        }
+    }
+    
+    // 校验依赖版本
+    for (PluginDescriptor plugin : plugins) {
+        String pluginId = plugin.getPluginId();
+        String existingVersion = plugin.getVersion();
+
+        List<String> dependents = new ArrayList<>(getDependents(pluginId));
+        while (!dependents.isEmpty()) {
+            String dependentId = dependents.remove(0);
+            PluginDescriptor dependent = pluginByIds.get(dependentId);
+            String requiredVersion = getDependencyVersionSupport(dependent, pluginId);
+            boolean ok = checkDependencyVersion(requiredVersion, existingVersion);
+            if (!ok) {
+                result.addWrongDependencyVersion(new WrongDependencyVersion(pluginId, dependentId, existingVersion, requiredVersion));
+            }
+        }
+    }
+
+    return result;
+}
+
+private void addPlugin(PluginDescriptor descriptor) {
+    String pluginId = descriptor.getPluginId();
+    List<PluginDependency> dependencies = descriptor.getDependencies();
+    if (dependencies.isEmpty()) {
+        // 若当前插件没有依赖其他插件，添加节点
+        dependenciesGraph.addVertex(pluginId);
+        dependentsGraph.addVertex(pluginId);
+    } else {
+        boolean edgeAdded = false;
+        for (PluginDependency dependency : dependencies) {
+            if (!dependency.isOptional()) {
+                edgeAdded = true;
+                // 添加边（若节点不存在，先添加节点）
+                dependenciesGraph.addEdge(pluginId, dependency.getPluginId());
+                dependentsGraph.addEdge(dependency.getPluginId(), pluginId);
+            }
+        }
+
+        // 可有可无的依赖，只添加节点，依赖边不添加
+        if (!edgeAdded) {
+            dependenciesGraph.addVertex(pluginId);
+            dependentsGraph.addVertex(pluginId);
+        }
+    }
+}
+~~~
+
+## 2.4 插件激活启动
+
+&nbsp;&nbsp;&nbsp;&nbsp;该方法仅执行插件的启动方法，并设置插件状态为激活状态，后续获取插件扩展时候才会具体加载构建。
+
+~~~
+public void startPlugins() {
+    for (PluginWrapper pluginWrapper : resolvedPlugins) {
+        PluginState pluginState = pluginWrapper.getPluginState();
+        if ((PluginState.DISABLED != pluginState) && (PluginState.STARTED != pluginState)) {
+            try {
+                // 执行插件启动方法
+                pluginWrapper.getPlugin().start();
+                pluginWrapper.setPluginState(PluginState.STARTED);
+                pluginWrapper.setFailedException(null);
+                startedPlugins.add(pluginWrapper);
+            } catch (Exception e) {
+                pluginWrapper.setPluginState(PluginState.FAILED);
+                pluginWrapper.setFailedException(e);
+            } finally {
+                firePluginStateEvent(new PluginStateEvent(this, pluginWrapper, pluginState));
+            }
+        }
+    }
+}
+~~~
+
+## 2.5 插件扩展点实现获取
+
+&nbsp;&nbsp;&nbsp;&nbsp;该方法为正式使用插件扩展点实现，以其中某一个方法分析开始，即分析"<T> List<T> getExtensions(Class<T> type)"该方法。
+
+## 2.5.1 根据插件扩展接口获取所有扩展点实现
+
+~~~
+public <T> List<T> getExtensions(Class<T> type) {
+    // 1. 先获取插件接口对应的所有扩展点实现Wapper
+    // 2. 根据Wapper创建扩展点实现类
+   return getExtensions(extensionFinder.find(type));
+}
+~~~
+
+## 2.5.2 根据扩展点接口获取所有Wapper
+
+~~~
+public <T> List<ExtensionWrapper<T>> find(Class<T> type) {
+    List<ExtensionWrapper<T>> extensions = new ArrayList<>();
+    for (ExtensionFinder finder : finders) {
+        // 遍历所有ExtensionFinder，获取扩展点实现Wapper
+        extensions.addAll(finder.find(type));
+    }
+
+    return extensions;
+}
+~~~
+
+~~~
+public <T> List<ExtensionWrapper<T>> find(Class<T> type) {
+    // 加载所有扩展点实现类
+    Map<String/*pluginId*/, Set<String/*扩展点实现类*/>> entries = getEntries();
+    List<ExtensionWrapper<T>> result = new ArrayList<>();
+
+    for (String pluginId : entries.keySet()) {
+        // 根据插件ID和扩展点接口获取所有Wapper
+        List<ExtensionWrapper<T>> pluginExtensions = find(type, pluginId);
+        result.addAll(pluginExtensions);
+    }
+
+    Collections.sort(result);
+
+    return result;
+}
+~~~
+
+## 2.5.3 加载所有扩展点实现类
+
+~~~
+private Map<String, Set<String>> getEntries() {
+    if (entries == null) {
+        entries = readStorages();
+    }
+
+    return entries;
+}
+
+private Map<String, Set<String>> readStorages() {
+    Map<String, Set<String>> result = new LinkedHashMap<>();
+
+    // 加载所有finder classpath的扩展点实现类（即META-INF/extensions.idx记录的和META-INF/services记录的，这个根据PluginManager配置的finder有关系）
+    result.putAll(readClasspathStorages());
+    // 加载所有finder 插件记录的扩展点实现类（即META-INF/extensions.idx记录的和META-INF/services记录的，这个根据PluginManager配置的finder有关系）
+    result.putAll(readPluginsStorages());
+
+    return result;
+}
+~~~
+
+## 2.5.4 根据插件ID和扩展点接口获取所有Wapper
+
+~~~
+public <T> List<ExtensionWrapper<T>> find(Class<T> type, String pluginId) {
+    List<ExtensionWrapper<T>> result = new ArrayList<>();
+
+    // 获取该插件所有扩展点实现类
+    Set<String> classNames = findClassNames(pluginId);
+    if (classNames == null || classNames.isEmpty()) {
+        return result;
+    }
+
+    if (pluginId != null) {
+        PluginWrapper pluginWrapper = pluginManager.getPlugin(pluginId);
+        if (PluginState.STARTED != pluginWrapper.getPluginState()) {
+            return result;
+        }
+    } else {
+    }
+
+    // 获取该插件的类加载器，若插件ID=null，那么该插件定义在PluginManager工程中，那么用应用的类加载器即可
+    ClassLoader classLoader = (pluginId != null) ? pluginManager.getPluginClassLoader(pluginId) : getClass().getClassLoader();
+
+    for (String className : classNames) {
+        try {
+            if (isCheckForExtensionDependencies()) {
+                // 如果使用可选依赖项，则类加载器可能无法加载扩展点信息，此时可以使用asm方式先加载
+
+                // 通过asm方式获取插件扩展点所有信息
+                ExtensionInfo extensionInfo = getExtensionInfo(className, classLoader);
+                if (extensionInfo == null) {
+                    continue;
+                }
+
+                // 记录没有激活的插件ID
+                List<String> missingPluginIds = new ArrayList<>();
+                for (String requiredPluginId : extensionInfo.getPlugins()) {
+                    PluginWrapper requiredPlugin = pluginManager.getPlugin(requiredPluginId);
+                    if (requiredPlugin == null || !PluginState.STARTED.equals(requiredPlugin.getPluginState())) {
+                        missingPluginIds.add(requiredPluginId);
+                    }
+                }
+                
+                // 打印没有激活的插件ID信息
+                if (!missingPluginIds.isEmpty()) {
+                    StringBuilder missing = new StringBuilder();
+                    for (String missingPluginId : missingPluginIds) {
+                        if (missing.length() > 0) missing.append(", ");
+                        missing.append(missingPluginId);
+                    }
+                    continue;
+                }
+            }
+
+            // load扩展点实现类
+            Class<?> extensionClass = classLoader.loadClass(className);
+
+            if (type.isAssignableFrom(extensionClass)) {
+                // 实例化扩展点实现Wapper
+                ExtensionWrapper extensionWrapper = createExtensionWrapper(extensionClass);
+                result.add(extensionWrapper);
+            } else {
+                if (RuntimeMode.DEVELOPMENT.equals(pluginManager.getRuntimeMode())) {
+                    checkDifferentClassLoaders(type, extensionClass);
+                }
+            }
+        } catch (ClassNotFoundException e) {
+        }
+    }
+
+    if (result.isEmpty()) {
+    } else {
+    }
+
+    Collections.sort(result);
+
+    return result;
+}
+~~~
+
+## 2.5.5 根据扩展点实现Wapper实例化
+
+~~~
+private <T> List<T> getExtensions(List<ExtensionWrapper<T>> extensionsWrapper) {
+    List<T> extensions = new ArrayList<>(extensionsWrapper.size());
+    for (ExtensionWrapper<T> extensionWrapper : extensionsWrapper) {
+        try {
+            extensions.add(extensionWrapper.getExtension());
+        } catch (PluginRuntimeException e) {
+        }
+    }
+
+    return extensions;
+}
+
+public T getExtension() {
+    if (extension == null) {
+        extension = (T) extensionFactory.create(descriptor.extensionClass);
+    }
+
+    return extension;
+}
+~~~
+
+&nbsp;&nbsp;&nbsp;&nbsp;扩展点实现创建工厂有两种，第一种是单例型的创建，一种是每次请求都创建，根据初始化PluginManager指定，此处以单例型创建工厂介绍。
+
+~~~
+public <T> T create(Class<T> extensionClass) {
+    String extensionClassName = extensionClass.getName();
+    // 若之前已经创建，那么直接返回
+    if (cache.containsKey(extensionClassName)) {
+        return (T) cache.get(extensionClassName);
+    }
+
+    // 否则调用基类实例化
+    T extension = super.create(extensionClass);
+    if (extensionClassNames.isEmpty() || extensionClassNames.contains(extensionClassName)) {
+        cache.put(extensionClassName, extension);
+    }
+
+    return extension;
+}
+
+public <T> T create(Class<T> extensionClass) {
+    try {
+        // 因此扩展点实现类必须包含空的构造函数，这个是pf4j扩展点实现的要求
+        return extensionClass.newInstance();
+    } catch (Exception e) {
+        throw new PluginRuntimeException(e);
+    }
+}
+~~~
+
