@@ -247,7 +247,7 @@ public void loadPlugins() {
 }
 ~~~
 
-### 2.3。1 根据插件路径加载该插件
+### 2.3.1 根据插件路径加载该插件
 
 ~~~
 protected PluginWrapper loadPluginFromPath(Path pluginPath) {
