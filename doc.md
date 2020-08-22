@@ -231,3 +231,15 @@
 - 1 [byte-buddy 1.9.6 简述及原理](https://blog.csdn.net/undergrowth/article/details/86493336)
 
 - 2 [Byte Buddy 教程](https://notes.diguage.com/byte-buddy-tutorial/)
+
+## 2020-08-18
+
+- 1 [微服务划分的逻辑](https://zhuanlan.zhihu.com/p/86346030)
+
+- 2 [微服务目录](https://www.zhihu.com/topic/19826540/hot)
+
+- 3 [领域驱动设计基础](https://zhuanlan.zhihu.com/p/91608302)
+
+- 4 [在分布式系统中使用 DDD](https://zhuanlan.zhihu.com/p/139534821)
+
+- 5 [DDD 指导技术团队划分问题](https://zhuanlan.zhihu.com/p/141641882)
